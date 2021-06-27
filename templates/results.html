@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>SDN Scraper</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+    <link rel= "stylesheet" type= "text/css" href= "{{ url_for('static', filename='styles/css/main.css') }}">
+    <style>
+      #form_btn {
+        opacity: 0.4;
+      }
+
+      #form_btn:hover {
+        opacity: 1 !important;
+      }
+    </style>
+  </head>
+
+  <body>
+    {% for school_name in school_list %}
+        <p>School: {{ school_name }}</p>
+    {% endfor %}
+    {% for dict in results %}
+      <h1>School: {{ school_name }}</h1>
+      {% for message, date in dict.items() %}
+        <h2>Date: {{ date }}</h2>
+        <p>Message: {{ message }}</p>
+      {% endfor %}
+    {% endfor %}
+  </body>
+</html>

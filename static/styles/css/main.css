@@ -1,0 +1,100 @@
+ /* Global Variables */
+:root {
+    --FONT: 'Roboto', sans-serif;
+    --COLOR_BLACK: #000000;
+    --COLOR_DARK_GRAY: #1f1f1f;
+    --COLOR_GRAY: rgba(#000000, 0.6);
+    --COLOR_LIGHT_GRAY: #f1f1f1;
+    --COLOR_LIGHT_GREEN: #afd1c0;
+    --COLOR_GREEN: rgb(111, 154, 111);
+    --SEMIBOLD: 500;
+}
+
+html {
+    background-color: var(--COLOR_LIGHT_GREEN);
+    font-family: var(--FONT);
+    position: relative;
+    min-height: 100%;
+}
+
+body {
+    font-family: var(--FONT);
+    background-color: var(--COLOR_LIGHT_GREEN);
+    min-height: 100%;
+}
+
+footer {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    height: 100px; /* Same height as the margin to the bottom of the body. */
+}
+
+.boxed {
+    width: 40%;
+    /* min-width: 1400px; */
+    border: 2px solid var(--COLOR_GREEN);
+    background-color: var(--COLOR_LIGHT_GRAY);
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 50px;
+    margin-bottom: 50px;
+    padding: 25px 25px;
+    position: absolute;
+    border-radius: 10px;
+    box-shadow: 2px 2px 5px var(--COLOR_DARK_GRAY);
+}
+
+.form_input {
+    border-radius: 5px;
+    border: 1px solid var(--COLOR_DARK_GRAY);
+}
+
+label {
+    display: block;
+    margin: 0 0 10px;
+    color: var(--COLOR_GRAY);
+    font-size: inherit;
+    font-weight: var(--SEMIBOLD);
+    line-height: 1;
+    text-transform: uppercase;
+    letter-spacing: .2em;
+}
+
+input {
+    outline: none;
+    padding: 5px 10px;
+    color: var(--COLOR_GRAY);
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: var(--SEMIBOLD);
+    line-height: inherit;
+}
+
+.submit_btn {
+    outline: none;
+    background-color: rgb(101, 140, 124);
+    color: var(--COLOR_LIGHT_GRAY);
+    width: 100%;
+    border: 0;
+    border-radius: 4px;
+    padding: 12px 20px;
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: var(--SEMIBOLD);
+    line-height: inherit;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+.long_form_text {
+    min-width: 95%;
+    max-width: 95%;
+    height: 25px;
+    resize: none;
+    font: inherit;
+    padding-left: 2ex;
+    padding-right: 2ex;
+    padding-top: 2ex;
+    min-height: 20ex;
+}

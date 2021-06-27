@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>SDN Scraper</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+    <link rel= "stylesheet" type= "text/css" href= "{{ url_for('static', filename='styles/css/main.css') }}">
+    <style>
+      #form_btn {
+        opacity: 0.4;
+      }
+
+      #form_btn:hover {
+        opacity: 1 !important;
+      }
+    </style>
+  </head>
+
+  <body>
+  <div>
+    <div class='boxed' style='position:absolute;left:50%;transform:translate(-50%,0%);margin-bottom: 20px;'>
+      <h1 style='margin-bottom: 5px;'>Student Doctor Network (SDN) Webscraper</h1>
+      <hr>
+      <h3>
+        Instructions:
+      </h3>
+      <ol>
+        <li>If you do not specify any schools, data on all available medical schools in the specified year will be returned.</li>
+        <li>When specifying medical schools, <em>make sure to separate each school by a comma and a single space!</em> Otherwise, you will break the internet.</li>
+        <li>Try to spell the medical school as best you can. I'll try to guess what school you're talking about, but there's only so much a couple of 1's and 0's can do.</li>
+        <li>No need to include the words "medical school" when specifying a school entry. We get it, you're premed.</li>
+      </ol>
+      <form action="{{ url_for('results') }}" method='POST'>
+      <h2 style='line-height: 1.5;'>
+        I am looking for data from the
+        <select style='transform:translate(0%, -20%);' name='year'>
+          <option value='2021-2022'>2021-2022</option>
+          <option value='2020-2021'>2020-2021</option>
+          <option value='2019-2020'>2019-2020</option>
+          <option value='2018-2019'>2018-2019</option>
+        </select>
+        AMCAS application year. I am interested in looking for
+        <select style='transform:translate(0%, -20%);' name='recency'>
+          <option value='earliest'>earliest</option>
+          <option value='most recent'>most recent</option>
+          <option value='all'>all</option>
+        </select>
+        data on when
+        <select style='transform:translate(0%, -20%);' name='keyword'>
+            <option value='secondaries'>secondaries</option>
+            <option value='interviews'>interview invites</option>
+            <option value='decisions'>decisions</option>
+            <option value='financial'>financial aid</option>
+            <option value='other'>Other</option>
+        </select>
+        became available. Please report data on the following schools:
+      </h2>
+      <p><textarea name='school_list' class='long_form_text' class="form_input" style='border-radius: 8px;' placeholder='Harvard, Stanford, UCLA, UCI, NYU, ...'></textarea></p>
+      <p>
+        If you selected "Other" for the data that you're looking for above, please type the keyword that you're looking for. Otherwise, leave this field blank. <input type='text' name='opt-keyword' placeholder='Keyword' size='20' class="form_input">
+      </p>
+
+      <p>
+        <button type='submit' id='form_btn' class='submit_btn' style='width:100%;'>Fuel My Neuroticism!</button>
+      </p>
+      </form>
+    </div>
+  </div>
+
+  
+
+  <footer>
+    <p><!-- {{ copyright }} --></p>
+  </footer>
+  </body>
+</html>
