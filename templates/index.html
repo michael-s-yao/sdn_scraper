@@ -20,18 +20,18 @@
   </head>
 
   <body>
-  <div>
-    <div class='boxed' style='position:absolute;left:50%;transform:translate(-50%,0%);margin-bottom: 20px;'>
+  <div style='width: 100%;'>
+    <div class='boxed' style='position:relative;margin-left:auto;margin-right:auto;'>
       <h1 style='margin-bottom: 5px;'>Student Doctor Network (SDN) Webscraper</h1>
       <hr>
       <h3>
         Instructions:
       </h3>
       <ol>
-        <li>If you do not specify any schools, data on all available medical schools in the specified year will be returned.</li>
-        <li>When specifying medical schools, <em>make sure to separate each school by a comma and a single space!</em> Otherwise, you will break the internet.</li>
-        <li>Try to spell the medical school as best you can. I'll try to guess what school you're talking about, but there's only so much a couple of 1's and 0's can do.</li>
-        <li>No need to include the words "medical school" when specifying a school entry. We get it, you're premed.</li>
+        <li>When querying for schools, don't be uptight. What I mean is don't type out "Harvard Medical School" - just "Harvard" is good. Don't type out "University of California, Los Angeles" - just "UCLA." Ironically, I become more and more unpredictable the more specific you are.</li>
+        <li>When specifying medical schools, <em>make sure to separate each school by a comma and a single space!</em> Otherwise, I don't know what will happen.</li>
+        <li>If a query looks like it's not working, go to <a target="_blank" rel="noopener noreferrer" href='https://forums.studentdoctor.net/threads/2021-2022-alphabetical-listing-of-schools.1440875/'>this link</a> and try querying the medical school name <em>exactly as you see it</em> there.</li>
+        <li>No need to include the words "medical school" or "medical college" when specifying a school entry. I get it, you're applying to med school.</li>
       </ol>
       <form action="{{ url_for('results') }}" method='POST'>
       <h2 style='line-height: 1.5;'>
@@ -70,10 +70,8 @@
     </div>
   </div>
 
-  
-
-  <footer>
-    <p><!-- {{ copyright }} --></p>
-  </footer>
+  <div style='position: absolute; width: 100%;text-align: center;color: #f1f1f1;'>
+    <p>Copyright Michael Yao 2021.</p>
+  </div>
   </body>
 </html>

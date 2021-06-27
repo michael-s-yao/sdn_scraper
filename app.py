@@ -13,13 +13,10 @@ def results():
     data = request.form
     scraper = SDNScraper(data)
     results = scraper.scrape()
+    results = None if len(results) == 0 else results
     print(results)
     return render_template('results.html', school_list=scraper.school_query,
                            results=results)
 
-@app.route('/error')
-def error():
-    return render_template('error.html')
-
 if __name__ == "__main__":
-    app.run()
+    app.run(ssl_context='adhoc')

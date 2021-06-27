@@ -1,3 +1,8 @@
+"""Copyright Michael Yao 2021.
+
+Web scraper to read data from Student Doctor Network.
+"""
+
 import requests
 from bs4 import BeautifulSoup
 import re
@@ -22,6 +27,7 @@ class SDNScraper:
              '2018-2019': 'https://forums.studentdoctor.net/threads/2018-2019-all-school-discussions-alphabetical-list.1350681/'}
 
     def __init__(self, data):
+        """Initialize web scraper class."""
         # Get the desired page.
         self.page = requests.get(SDNScraper.URLS[data['year']])
 
@@ -41,21 +47,20 @@ class SDNScraper:
             if len(schools_req) == 1:
                 schools_req = data['school_list'].split(' ')
             for i in range(len(schools_req)):
-                # Remove extra spaces from beginning of school name.
-                while schools_req[i][0] == ' ':
-                    schools_req[i] == schools_req[i][1:]
-                # Remove extra spaces from end of school name.
-                while schools_req[i][-1] == ' ':
-                    schools_req[i] == schools_req[i][:-1]
+                schools_req[i] = schools_req[i].strip()
                 if len(schools_req[i]) == 0:
                     schools_req[i] == None
                 else:
                     # Convert school name to lower case.
                     schools_req[i] == schools_req[i].lower()
 
-        # Get the school(s) to search for
         self.school_query = SDNScraper.guess_school(school_names_urls.keys(),
-                                                    query=schools_req)[0]
+                                                    query=schools_req)
+        if self.school_query is not None:
+            self.school_query = self.school_query[0]
+        else:
+            self.urls = None
+            return
         urls = []
         for site in school_names_urls.keys():
             if site in self.school_query:
@@ -85,8 +90,11 @@ class SDNScraper:
             raise ValueError('Unrecognized Keyword!')
 
 
-    def scrape(self):
+    def scrape(self) -> list:
+        """Scrape SDN for relevant content."""
         content = []
+        if self.urls is None:
+            return content
         # Parse through every school in the query list
         for i in range(len(self.urls)):
             # Parse through every page on the school-specific page
@@ -102,10 +110,14 @@ class SDNScraper:
             # Try to retrieve max page number:
             for entry in nav_sites:
                 input = entry.find('input')
-                if input is not None:
+                if isinstance(input, int) and input == -1:
+                    continue
+                elif input is not None:
                     max_page = input.get('max')
                     break
-            nav_sites = [_site.find('a').get('href') for _site in nav_sites]
+            nav_sites = [_site.find('a').get('href') for _site in nav_sites if
+                         not ((isinstance(_site.find('a'), int) and
+                         _site.find('a') == -1) or _site.find('a') is None)]
             nav_sites = [SDNScraper.SDN_URL + _site for _site in nav_sites
                          if _site is not None]
             # Fill in the gaps of the pages with no URLS.
@@ -118,6 +130,8 @@ class SDNScraper:
                 for i in range(first_site + 1, last_site):
                     nav_sites.append(nav_sites[0].split('page')[0] + 'page-' +
                                      str(i))
+            elif len(nav_sites) == 0:
+                nav_sites = [school_url]
             base_url = nav_sites[0]
             nav_sites = sorted(nav_sites[1:], key=lambda x: int(x.split('-')[-1]))
             nav_sites.insert(0, base_url)
@@ -135,34 +149,54 @@ class SDNScraper:
                 school_page = requests.get(page_url)
                 school_soup = BeautifulSoup(school_page.content, 'html.parser')
                 # Retrieve the messages on the page
-                school_messages = school_soup.find_all("div", class_="bbWrapper")
-                print(school_messages)
-                for school_message in school_messages:
+                school_messages = school_soup.find_all("div", class_="message-content")
+                for body in school_messages:
+                    school_message = body.find_all("div", class_="bbWrapper")
+                    if school_message is None:
+                        continue
+                    user_content = body.find_all("div", class_="message-userContent")
+                    user = 'Unknown'
+                    date = 'Unknown'
+                    if user_content is not None:
+                        user = user_content[0].get('data-lb-caption-desc').split()
+                        date = ' '.join(user[-6:-3])
+                        user = user[0]
+
+                    school_message = school_message[0]
                     for _key in self.keyword:
-                        print(f'Key: {_key}')
-                        print(f'School_message: {school_message}')
-                        print(f'Page_num: {page_num}')
                         if _key not in school_message.text:
+                            continue
+                        if (school_message.text.count('iirc') ==
+                                school_message.text.count('ii')
+                                and _key == 'ii'):
                             continue
                         # Get the text of the messages.
                         if _key.lower() in school_message.text.lower():
+                            # Get the page number that we're on.
                             ret_page = page_num
+                            # Get the text of the message
                             message_content = school_message.text
-                            found[message_content] = page_num + 1
+                            # Remove any inner messages.
+                            message_content = message_content.split('Click to expand...')[-1]
+                            found[message_content] = [page_num + 1, user, date]
                             break
                 
                 # Check if done searching for school
                 if ret_page != -1 and self.recency != 'all':
                     break
-            content.append(found)
+            if len(found) == 0:
+                content.append(None)
+            else:
+                content.append(found)
 
         return content            
 
 
     @staticmethod
     def guess_school(search: list, query: list) -> list:
+        """Guess formatted school name in search from query."""
         if query is None:
-            return search
+            return None
         lst = []
         bad_query = []
         for _q in query:
@@ -176,15 +210,16 @@ class SDNScraper:
                 school_name = '%s' % val
                 for regex in REMOVE:
                     val = val.replace(regex, '')
+                # Before anything, check edge case: 'Charles R Drew @ UCLA'
+                # contains UCLA but that's not what people mean when they query
+                # UCLA.
+                if _q.lower() == 'ucla' and 'drew' not in val.lower():
+                    found = 'University of California - Los Angeles (Geffen)'
+                    break
                 # First, let's check if the name already directly matches.
                 if _q.lower() in val.lower() or val.lower() in _q.lower():
-                    # Edge case: 'Charles R Drew @ UCLA' contains UCLA but
-                    # that's not what people mean when they query UCLA.
-                    if _q.lower() == 'ucla' and 'drew' in val.lower():
-                        pass
-                    else:
-                        found = school_name
-                        break
+                    found = school_name
+                    break
                 # Next, let's check if the abbreviation matches.
                 # This works for schools like UCLA, UCSF, etc.
                 regex = re.compile('[\W_0-9]+')
@@ -219,18 +254,3 @@ class SDNScraper:
             else:
                 bad_query.append(_q)
         return lst, bad_query
-
-
-
-#     print(school_names[i])
- #    print("    " + school_url)
-  #   if (first_page == -1):
-   #     print("    Keyword not found for this school.")
-   # else:
-   #     print("    First Page Instance: " + str(first_page))
-   #     newline_char_pos = message_content[1:].find('\n')
-   #     if (newline_char_pos == -1):
-   #         print("    Initial Message Content: " + message_content[1:])
-   #     else:
-   #         print("    Initial Message Content: " + message_content[1:newline_char_pos])
-   # print()

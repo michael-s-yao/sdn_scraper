@@ -20,14 +20,30 @@
   </head>
 
   <body>
-    {% for school_name in school_list %}
-        <p>School: {{ school_name }}</p>
-    {% endfor %}
-    {% for dict in results %}
-      {% for message, page in dict.items() %}
-        <h2>Page: {{ page }}</h2>
-        <p>Message: {{ message }}</p>
-      {% endfor %}
-    {% endfor %}
+    <div style='width: 100%;'>
+    <div class='boxed' style='position:relative;margin-left:auto;margin-right:auto;'>
+        {% if results is not defined %}
+            <h2 style='text-align: center;'>You silly goose, you have to give me a school name for me to work! &#129414;</h2>
+        {% else %}
+            {% for dict in results %}
+            <h2>{{ loop.index }}. Query Results for {{ school_list[loop.index0] }}</h2>
+                {% if dict is not defined %}
+                    <p>No results were found, try checking again tomorrow!</p>
+                {% else %}
+                    {% for message, lst in dict.items() %}
+                        <p style='margin-bottom: 0;'>From page {{ lst[0] }} of the forum...</p>
+                        <p style='margin-top: 0;'><em>{{ message }}</em> &emsp; @{{ lst[1] }}, posted on {{ lst[2] }} </p>
+                    {% endfor %}
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+        <p>
+            <button type='button' class='submit_btn' style='width:100%;' onclick="location.href='/'">Make Another Query</button>
+        </p>
+    </div>
+  <div style='position: absolute; width: 100%;text-align: center;color: #f1f1f1;'>
+    <p>Copyright Michael Yao 2021.</p>
+  </div>
+  </div>
   </body>
 </html>

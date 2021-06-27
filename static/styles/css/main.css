@@ -32,7 +32,6 @@ footer {
 
 .boxed {
     width: 40%;
-    /* min-width: 1400px; */
     border: 2px solid var(--COLOR_GREEN);
     background-color: var(--COLOR_LIGHT_GRAY);
     margin-left: auto;
@@ -40,7 +39,7 @@ footer {
     margin-top: 50px;
     margin-bottom: 50px;
     padding: 25px 25px;
-    position: absolute;
+    position: relative;
     border-radius: 10px;
     box-shadow: 2px 2px 5px var(--COLOR_DARK_GRAY);
 }
