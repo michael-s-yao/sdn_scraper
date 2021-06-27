@@ -24,9 +24,8 @@
         <p>School: {{ school_name }}</p>
     {% endfor %}
     {% for dict in results %}
-      <h1>School: {{ school_name }}</h1>
-      {% for message, date in dict.items() %}
-        <h2>Date: {{ date }}</h2>
+      {% for message, page in dict.items() %}
+        <h2>Page: {{ page }}</h2>
         <p>Message: {{ message }}</p>
       {% endfor %}
     {% endfor %}

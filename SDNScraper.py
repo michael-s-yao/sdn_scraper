@@ -10,11 +10,12 @@ class SDNScraper:
 
     # Keywords for common queries.
     KEYWORDS_SECONDARY = ['secondary']
-    KEYWORDS_INVITE = ['ii', 'interview invite', 'invite']
+    KEYWORDS_INVITE = ['ii', 'interview invite']
     KEYWORDS_DECISION = ['a.', 'a!', 'w.', 'w!', 'r.', 'r!', 'accept', 'waitlist', 'reject']
     KEYWORDS_FIN_AID = ['aid', 'finaid', 'fin aid', 'financial aid']
 
     # URLs for School Lists
+    SDN_URL = 'https://forums.studentdoctor.net'
     URLS = { '2021-2022': 'https://forums.studentdoctor.net/threads/2021-2022-alphabetical-listing-of-schools.1440875/',
              '2020-2021': 'https://forums.studentdoctor.net/threads/2020-2021-alphabetical-listing-of-schools.1406109/',
              '2019-2020': 'https://forums.studentdoctor.net/threads/2019-2020-alphabetical-listing-of-schools.1374208/',
@@ -23,8 +24,6 @@ class SDNScraper:
     def __init__(self, data):
         # Get the desired page.
         self.page = requests.get(SDNScraper.URLS[data['year']])
-
-        print(data)
 
         # Generate list of schools.
         soup = BeautifulSoup(self.page.content, 'html.parser')
@@ -56,7 +55,7 @@ class SDNScraper:
 
         # Get the school(s) to search for
         self.school_query = SDNScraper.guess_school(school_names_urls.keys(),
-                                                    query=schools_req)
+                                                    query=schools_req)[0]
         urls = []
         for site in school_names_urls.keys():
             if site in self.school_query:
@@ -85,6 +84,7 @@ class SDNScraper:
         else:
             raise ValueError('Unrecognized Keyword!')
 
+
     def scrape(self):
         content = []
         # Parse through every school in the query list
@@ -99,29 +99,56 @@ class SDNScraper:
             if school_navigation is None: nav_sites=["-1"]
             # Handle the general case of multiple pages for the school
             else: nav_sites = school_navigation.find_all("li")
+            # Try to retrieve max page number:
+            for entry in nav_sites:
+                input = entry.find('input')
+                if input is not None:
+                    max_page = input.get('max')
+                    break
+            nav_sites = [_site.find('a').get('href') for _site in nav_sites]
+            nav_sites = [SDNScraper.SDN_URL + _site for _site in nav_sites
+                         if _site is not None]
+            # Fill in the gaps of the pages with no URLS.
+            if len(nav_sites) > 3:
+                first_site = nav_sites[-2].split('-')
+                first_site = first_site[-1]
+                last_site = nav_sites[-1].split('-')[-1]
+                first_site = int(first_site) if first_site.isnumeric() else 3
+                last_site = int(last_site) if last_site.isnumeric() else max_page
+                for i in range(first_site + 1, last_site):
+                    nav_sites.append(nav_sites[0].split('page')[0] + 'page-' +
+                                     str(i))
+            base_url = nav_sites[0]
+            nav_sites = sorted(nav_sites[1:], key=lambda x: int(x.split('-')[-1]))
+            nav_sites.insert(0, base_url)
 
             ret_page = -1
             message_content = ""
             found = {}
 
-            page_nums = range(1, len(nav_sites) + 1)
+            page_nums = range(0, len(nav_sites))
             if self.recency == 'most recent':
                 page_nums = reversed(page_nums)
             for page_num in page_nums:
                 # Send page request
-                school_page = requests.get(school_url + "page-" + str(page_num))
+                page_url = nav_sites[page_num]
+                school_page = requests.get(page_url)
                 school_soup = BeautifulSoup(school_page.content, 'html.parser')
                 # Retrieve the messages on the page
-                school_messages = school_soup.find_all("div", class_="bbCodeBlock-expandContent ")
+                school_messages = school_soup.find_all("div", class_="bbWrapper")
+                print(school_messages)
                 for school_message in school_messages:
-                    for _key in self.keyword():
+                    for _key in self.keyword:
+                        print(f'Key: {_key}')
+                        print(f'School_message: {school_message}')
+                        print(f'Page_num: {page_num}')
                         if _key not in school_message.text:
                             continue
                         # Get the text of the messages.
                         if _key.lower() in school_message.text.lower():
                             ret_page = page_num
                             message_content = school_message.text
-                            found[message_content] = page_num
+                            found[message_content] = page_num + 1
                             break
                 
                 # Check if done searching for school
@@ -160,12 +187,13 @@ class SDNScraper:
                         break
                 # Next, let's check if the abbreviation matches.
                 # This works for schools like UCLA, UCSF, etc.
-                regex = re.compile('[^a-zA-Z]')
+                regex = re.compile('[\W_0-9]+')
+                regex = regex.sub('', val)
                 abbrev = ''
-                for c in regex.sub('', val):
-                    abbrev += c if c.isupper() else ''
+                for i in range(len(regex)):
+                    abbrev += regex[i] if regex[i].isupper() else ''
                 abbrev = abbrev.lower()
-                if _q.lower() in abbrev or abbrev in _q.lower():
+                if _q.lower() in abbrev:
                     found = school_name
                     break
                 # Next, let's handle schools that start with "University of"
