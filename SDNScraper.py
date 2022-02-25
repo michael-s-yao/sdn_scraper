@@ -1,11 +1,12 @@
-"""Copyright Michael Yao 2021.
+"""Copyright Michael Yao 2022.
 
 Web scraper to read data from Student Doctor Network.
 """
-
 import requests
 from bs4 import BeautifulSoup
 import re
+import json
+from datetime import datetime
 
 class SDNScraper:
     # If the only punctuation there is is a question mark, then no helpful
@@ -14,9 +15,9 @@ class SDNScraper:
     PUNCTUATION = ['.', '!']
 
     # Keywords for common queries.
-    KEYWORDS_SECONDARY = ['secondary']
-    KEYWORDS_INVITE = ['ii', 'interview invite']
-    KEYWORDS_DECISION = ['a.', 'a!', 'w.', 'w!', 'r.', 'r!', 'accept', 'waitlist', 'reject']
+    KEYWORDS_SECONDARY = ['secondary received', 'secondary']
+    KEYWORDS_INVITE = ['ii ', 'ii!', 'interview invite']
+    KEYWORDS_DECISION = ['a.', 'a!', 'w.', 'w!', 'r.', 'accepted!', 'waitlisted', 'rejected']
     KEYWORDS_FIN_AID = ['aid', 'finaid', 'fin aid', 'financial aid']
 
     # URLs for School Lists
@@ -24,11 +25,12 @@ class SDNScraper:
     URLS = { '2021-2022': 'https://forums.studentdoctor.net/threads/2021-2022-alphabetical-listing-of-schools.1440875/',
              '2020-2021': 'https://forums.studentdoctor.net/threads/2020-2021-alphabetical-listing-of-schools.1406109/',
              '2019-2020': 'https://forums.studentdoctor.net/threads/2019-2020-alphabetical-listing-of-schools.1374208/',
-             '2018-2019': 'https://forums.studentdoctor.net/threads/2018-2019-all-school-discussions-alphabetical-list.1350681/'}
+             '2018-2019': 'https://forums.studentdoctor.net/threads/2018-2019-all-school-discussions-alphabetical-list.1350681/' }
 
     def __init__(self, data):
         """Initialize web scraper class."""
         # Get the desired page.
+        self.year = data['year'].replace('-', '')
         self.page = requests.get(SDNScraper.URLS[data['year']])
 
         # Generate list of schools.
@@ -40,19 +42,16 @@ class SDNScraper:
             school_names_urls[site.text[10:]] = site['href']
 
         # Get requested school query.
-        if not data['school_list']:
-            schools_req = None
-        else:
-            schools_req = data['school_list'].split(',')
-            if len(schools_req) == 1:
-                schools_req = data['school_list'].split(' ')
-            for i in range(len(schools_req)):
-                schools_req[i] = schools_req[i].strip()
-                if len(schools_req[i]) == 0:
-                    schools_req[i] == None
-                else:
-                    # Convert school name to lower case.
-                    schools_req[i] == schools_req[i].lower()
+        schools_req = []
+        MAX_SCHOOL_COUNT = 10
+        for i in range(MAX_SCHOOL_COUNT):
+            inpt = data.get("school-" + str(i + 1), "")
+            if inpt is None or not isinstance(inpt, str) or len(inpt) == 0:
+                continue
+            schools_req.append(inpt.lower())
+        self.schools_req_list = schools_req
+        self.school_inputs = "-".join(schools_req)
+        self.school_inputs = self.school_inputs.replace(" ", "_")
 
         self.school_query = SDNScraper.guess_school(school_names_urls.keys(),
                                                     query=schools_req)
@@ -68,29 +67,31 @@ class SDNScraper:
         self.urls = urls
 
         # Get the type of data to return.
-        self.recency = (data['recency'] if data['recency'] is not None
-                            else 'most recent')
+        self.recency = data.get("recency", "").lower()
+        self.recency_input = data.get("recency", "").replace(" ", "_")
 
-        # Get the keyword to search for
-        self.keyword = data['keyword'].lower()
-        if self.keyword == 'other':
+        # Get the keyword to search for.
+        self.keyword = data.get("keyword", "").lower()
+        self.keyword_input = data['keyword'].lower().replace(" ", "_")
+        if self.keyword == 'something else':
+            # TODO
             self.keyword = data['opt-keyword'].lower()
             assert self.keyword is not None
             assert len(self.keyword) > 0
             self.keyword = [self.keyword]
         elif self.keyword == 'secondaries':
             self.keyword = SDNScraper.KEYWORDS_SECONDARY
-        elif self.keyword == 'interviews':
+        elif self.keyword == 'interview invites':
             self.keyword = SDNScraper.KEYWORDS_INVITE
         elif self.keyword == 'decisions':
             self.keyword = SDNScraper.KEYWORDS_DECISION
-        elif self.keyword == 'financial':
+        elif self.keyword == 'financial aid':
             self.keyword = SDNScraper.KEYWORDS_FIN_AID
         else:
             raise ValueError('Unrecognized Keyword!')
 
 
-    def scrape(self) -> list:
+    def scrape(self, export: bool = False) -> str:
         """Scrape SDN for relevant content."""
         content = []
         if self.urls is None:
@@ -166,9 +167,15 @@ class SDNScraper:
                     for _key in self.keyword:
                         if _key not in school_message.text:
                             continue
-                        if (school_message.text.count('iirc') ==
-                                school_message.text.count('ii')
-                                and _key == 'ii'):
+                        if len(school_message.text) > 50:
+                            continue
+                        if "?" in school_message.text:
+                            continue
+                        if (_key == "a." or _key == "a!") and len(school_message.text) > 5:
+                            continue
+                        if (_key == "w." or _key == "w!") and len(school_message.text) > 5:
+                            continue
+                        if _key == "r." and len(school_message.text) > 5:
                             continue
                         # Get the text of the messages.
                         if _key.lower() in school_message.text.lower():
@@ -180,7 +187,7 @@ class SDNScraper:
                             message_content = message_content.split('Click to expand...')[-1]
                             found[message_content] = [page_num + 1, user, date]
                             break
-                
+
                 # Check if done searching for school
                 if ret_page != -1 and self.recency != 'all':
                     break
@@ -189,7 +196,38 @@ class SDNScraper:
             else:
                 content.append(found)
 
-        return content            
+        if not export:
+            return json.dumps(content)
+        FINAL = ""
+        HEADERS = ["Message", "SDN Page Number", "Author Username", "Date Posted"]
+        for i in range(len(content)):
+            p = []
+            # Final output string.
+            try:
+                f = '"' + self.schools_req_list[i].replace('"', '""').upper() + '"' + '\n'
+            except IndexError:
+                f = "\n"
+            # Format HEADERS to CSV string.
+            for h in HEADERS:
+                f += '"' + h.replace('"', '""') + '"' + ','
+            f = f[:-1] + '\n' if len(f) > 0 else f
+            # Format message entries to CSV string.
+            for key in content[i]:
+                d = datetime.strptime(content[i][key][2], '%b %d, %Y')
+                s = '"' + key.replace('"', '""') + '"' + ','
+                s += '"' + str(content[i][key][2]).replace('"', '""') + '"' + ','
+                s += '"' + str(content[i][key][0]).replace('"', '""') + '"' + ','
+                s += '"' + str(content[i][key][1]).replace('"', '""') + '"' + '\n'
+                p.append([d, s])
+            # Sort message strings by date.
+            p = sorted(p, key=lambda x: x[0],
+                       reverse=(self.recency == 'most recent'))
+            for i in range(len(p)):
+                f += p[i][1]
+            f += "\n"
+            FINAL += f
+
+        return FINAL
 
 
     @staticmethod
